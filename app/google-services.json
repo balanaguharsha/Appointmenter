@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "736348785150",
+    "firebase_url": "https://appointmenter-10074.firebaseio.com",
+    "project_id": "appointmenter-10074",
+    "storage_bucket": "appointmenter-10074.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:736348785150:android:47d58cb71a4947a1",
+        "android_client_info": {
+          "package_name": "com.example.researcher.appointmenter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "736348785150-1gclgsper64vip1cq1hbbqqf93dohp2i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.researcher.appointmenter",
+            "certificate_hash": "b4c7960fcdcfb1bcfef56baf71f9e5d93fcdcf6c"
+          }
+        },
+        {
+          "client_id": "736348785150-2qohqrdfalnsl6ftfi488gmbv09nh8fb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6YNhLA3j_dFmrnvMz62GJW-AnyvYTbpU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "736348785150-2qohqrdfalnsl6ftfi488gmbv09nh8fb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

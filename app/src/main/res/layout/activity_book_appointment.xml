@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="15dp"
+    tools:context=".BookAppointment">
+
+    <TextView
+        android:id="@+id/name"
+
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/entry_button"
+        android:text="TextView"
+        android:textAlignment="center"
+        android:textAllCaps="false"
+        android:textColor="#ffff"
+        android:layout_marginBottom="20dp"
+        android:textSize="24sp"
+        app:fontFamily="casual" />
+
+    <Button
+        android:id="@+id/date"
+        android:layout_marginBottom="5dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/register_button"
+        android:text="Pick date"
+        android:textAllCaps="false"
+        android:textColor="#ffff" />
+
+    <TextView
+        android:id="@+id/selectedDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+
+        android:text="TextView" />
+
+    <Button
+        android:id="@+id/time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/register_button"
+        android:layout_marginBottom="5dp"
+
+        android:text="Pick time"
+        android:textAllCaps="false"
+        android:textColor="#ffff" />
+
+    <TextView
+        android:id="@+id/selectedTime"
+        android:layout_marginBottom="75dp"
+
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="TextView" />
+
+    <Button
+        android:id="@+id/check"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/gobutton"
+        android:text="Check availability"
+        android:textAllCaps="false"
+        android:textColor="#ffff" />
+
+</LinearLayout>
