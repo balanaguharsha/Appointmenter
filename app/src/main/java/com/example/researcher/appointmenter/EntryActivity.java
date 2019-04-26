@@ -1,10 +1,13 @@
 package com.example.researcher.appointmenter;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TextInputEditText;
 import android.support.design.widget.TextInputLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -21,21 +24,44 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class EntryActivity extends AppCompatActivity {
+public class EntryActivity extends AppCompatActivity implements ForceUpdateChecker.OnUpdateNeededListener {
     static int backButtonCount=0;
 
+    public String md5(String s) {
+        try {
+            // Create MD5 Hash
+            MessageDigest digest = java.security.MessageDigest.getInstance("MD5");
+            digest.update(s.getBytes());
+            byte messageDigest[] = digest.digest();
 
+            // Create Hex String
+            StringBuffer hexString = new StringBuffer();
+            for (int i=0; i<messageDigest.length; i++)
+                hexString.append(Integer.toHexString(0xFF & messageDigest[i]));
+            return hexString.toString();
+
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
 
 
     final FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+
+
     TextInputLayout userNameLayout,passwordLayout;
     private static final String TAG = "EntryActivity";
     Map<String, Object> user = new HashMap<>();
@@ -46,6 +72,12 @@ public class EntryActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_entry);
+        FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
+                .setPersistenceEnabled(false)
+                .build();
+        db.setFirestoreSettings(settings);
+//        onUpdateNeeded("https://drive.google.com/folderview?id=1vjX1xP3h9ncBk09ZtnKaWdCfT6_GfvwI");
+        ForceUpdateChecker.with(this).onUpdateNeeded(this).check();
         entryButton=findViewById(R.id.entryButton);
         userName = findViewById(R.id.userName);
         password= findViewById(R.id.password);
@@ -76,7 +108,7 @@ public class EntryActivity extends AppCompatActivity {
 
     }
     public void checkingUserName(){
-        final String[] name = new String[1];
+        final String[] name = new String[2];
         CollectionReference usersRef = db.collection("users");
         usersRef.whereEqualTo("username",userName.getText().toString())
                 .get()
@@ -86,11 +118,12 @@ public class EntryActivity extends AppCompatActivity {
 
                         String TAG="RegisterActivity";
                         boolean isThere=false,in=false;
-
+                        String hashedPassword=md5(password.getText().toString());
                         if (task.isSuccessful()) {
                             for (QueryDocumentSnapshot document : task.getResult()) {
-                                if(document.get("password").toString().contentEquals(password.getText().toString())) {
+                                if(document.get("password").toString().contentEquals(hashedPassword)) {
                                     name[0] =document.get("name").toString();
+                                    name[1]=document.get("username").toString();
                                     passwordLayout.setError(null);
                                     isThere = true;
                                     break;
@@ -101,6 +134,7 @@ public class EntryActivity extends AppCompatActivity {
                             if(isThere){
                                Intent gotoAppointment=new Intent(getApplicationContext(),BookAppointment.class);
                                gotoAppointment.putExtra("name",name[0]);
+                               gotoAppointment.putExtra("username",name[1]);
                                startActivity(gotoAppointment);
                             }
                             else if(in){
@@ -180,5 +214,31 @@ public class EntryActivity extends AppCompatActivity {
             }
         }
 
+    }
+    @Override
+    public void onUpdateNeeded(final String updateUrl) {
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("New version available")
+                .setMessage("Please, update app to new version to continue using our app.")
+                .setPositiveButton("Update",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                redirectStore(updateUrl);
+                            }
+                        }).setNegativeButton("No, thanks",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                finish();
+                            }
+                        }).create();
+        dialog.show();
+    }
+
+    private void redirectStore(String updateUrl) {
+        final Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
     }
 }

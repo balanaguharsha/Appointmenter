@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -33,6 +38,7 @@
         android:textColor="#ffff" />
 
     <TextView
+
         android:id="@+id/selectedDate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -53,20 +59,39 @@
 
     <TextView
         android:id="@+id/selectedTime"
-        android:layout_marginBottom="75dp"
+        android:layout_marginBottom="15dp"
 
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="TextView" />
 
+    <android.support.design.widget.TextInputLayout
+        android:id="@+id/durationLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="75dp"
+        app:helperText="Good things take time!"
+        app:helperTextEnabled="true"
+        app:passwordToggleEnabled="true">
+
+        <android.support.design.widget.TextInputEditText
+            android:id="@+id/duration"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:hint="Required duration"
+            android:inputType="number"
+            android:textColor="@color/colorPrimary" />
+
+    </android.support.design.widget.TextInputLayout>
     <Button
         android:id="@+id/check"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="20dp"
         android:background="@drawable/gobutton"
-        android:text="Check availability"
+        android:text="Check availability and book"
         android:textAllCaps="false"
         android:textColor="#ffff" />
 
 </LinearLayout>
+</ScrollView>

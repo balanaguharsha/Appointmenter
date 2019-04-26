@@ -28,6 +28,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,6 +61,13 @@ public class RegisterActivity extends AppCompatActivity {
         spinnerArray.add("M.Tech. (Research project)");
         spinnerArray.add("JRF");
         spinnerArray.add("Ph.D.");
+
+        List<String> spinnerArray1 =  new ArrayList<String>();
+        spinnerArray1.add("Idea formation");
+        spinnerArray1.add("Core research");
+        spinnerArray1.add("Paper work");
+        spinnerArray1.add("Others");
+
         password.addTextChangedListener(new EditTextListener());
         isItOk=(TextView)findViewById(R.id.isItOk);
         isItOk.setText("");
@@ -70,6 +79,15 @@ public class RegisterActivity extends AppCompatActivity {
         final Spinner sItems = (Spinner) findViewById(R.id.typeOfStudent);
 
         sItems.setAdapter(adapter);
+
+        ArrayAdapter<String> adapter1 = new ArrayAdapter<String>(
+                this, android.R.layout.simple_spinner_item, spinnerArray1);
+
+        adapter1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        final Spinner sItems1 = (Spinner) findViewById(R.id.stage);
+
+        sItems1.setAdapter(adapter1);
 
         name=(EditText)findViewById(R.id.name);
         check=(Button)findViewById(R.id.check);
@@ -120,7 +138,9 @@ public class RegisterActivity extends AppCompatActivity {
                 user.put("name", name.getText().toString());
                 user.put("email", email.getText().toString());
                 user.put("type",sItems.getSelectedItem().toString());
-                user.put("password", password.getText().toString());
+                user.put("stage",sItems1.getSelectedItem().toString());
+
+                user.put("password", md5(password.getText().toString()));
                 db.collection("users")
                         .add(user)
                         .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
@@ -150,6 +170,24 @@ public class RegisterActivity extends AppCompatActivity {
 
 
 
+    }
+    public String md5(String s) {
+        try {
+            // Create MD5 Hash
+            MessageDigest digest = java.security.MessageDigest.getInstance("MD5");
+            digest.update(s.getBytes());
+            byte messageDigest[] = digest.digest();
+
+            // Create Hex String
+            StringBuffer hexString = new StringBuffer();
+            for (int i=0; i<messageDigest.length; i++)
+                hexString.append(Integer.toHexString(0xFF & messageDigest[i]));
+            return hexString.toString();
+
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return "";
     }
     public void checkingUserName(){
         CollectionReference usersRef = db.collection("users");

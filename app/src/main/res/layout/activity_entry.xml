@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -25,6 +29,7 @@
             android:id="@+id/userName"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:singleLine="true"
             android:hint="Enter username"
             android:textColor="@color/colorPrimary" />
     </android.support.design.widget.TextInputLayout>
@@ -44,6 +49,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:hint="Enter access code"
+            android:singleLine="true"
             android:inputType="textPassword"
             android:textColor="@color/colorPrimary" />
     </android.support.design.widget.TextInputLayout>
@@ -76,5 +82,12 @@
         android:background="@drawable/register_button"
         android:text="Register me!" />
 
+    <TextView
+        android:paddingTop="30dp"
+        android:id="@+id/textView3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Bugs can be killed! If informed at appointmentsamuda@gmail.com" />
 
-</LinearLayout>
+
+</LinearLayout></ScrollView>
