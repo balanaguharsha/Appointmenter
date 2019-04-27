@@ -22,6 +22,8 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -46,6 +48,7 @@ public class RegisterActivity extends AppCompatActivity {
     TextInputLayout emailLayout;
     TextView availability;
     Button register,check;
+    FirebaseAuth firebaseAuth;
     Map<String, Object> user = new HashMap<>();
     TextView isItOk;
     static boolean acceptPassword=false;
@@ -154,10 +157,26 @@ public class RegisterActivity extends AppCompatActivity {
                         .addOnFailureListener(new OnFailureListener() {
                             @Override
                             public void onFailure(@NonNull Exception e) {
+                                firebaseAuth.createUserWithEmailAndPassword(email.getText().toString(),password.getText().toString())
+                                        .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<AuthResult> task) {
+                                                if(task.isSuccessful()){
+                                                    Intent gotoLogin = new Intent(getApplicationContext(),EntryActivity.class);
+                                                    startActivity(gotoLogin);
+                                                    finish();
+                                                }
+                                                else{
+                                                    Toast.makeText(getApplicationContext(),"Something went wrong :(\nPlease try again!",Toast.LENGTH_SHORT).show();
+                                                }
+
+                                            }
+                                        });
 
                                 Toast.makeText(getApplicationContext(),"Failure:"+e.toString(),Toast.LENGTH_SHORT).show();
                             }
                         });
+
 
                 Intent gotoLogin = new Intent(getApplicationContext(),EntryActivity.class);
                 startActivity(gotoLogin);

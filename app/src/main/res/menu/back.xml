@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/back"
+        android:icon="@drawable/ic_back"
+        android:title="Get back"
+        app:showAsAction="ifRoom"
+        
+        ></item>
+    <item
+        android:id="@+id/refresh"
+        android:icon="@drawable/ic_refresh_black_24dp"
+        android:title="Get back"
+        app:showAsAction="ifRoom"
+
+        ></item>
+    <item
+        android:id="@+id/Accepted"
+        android:title="Accepted appointments"
+        app:showAsAction="never"
+        ></item>
+    <item
+        android:id="@+id/NotYetAccepted"
+        android:title="Not yet accepted appointments"
+        app:showAsAction="never"
+        ></item>
+    <item
+        android:id="@+id/All"
+        android:title="Show all"
+        app:showAsAction="never"
+        ></item>
+</menu>

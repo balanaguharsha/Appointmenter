@@ -12,4 +12,5 @@
         android:title="Booked appointments"
         app:showAsAction="never"
         ></item>
+
 </menu>

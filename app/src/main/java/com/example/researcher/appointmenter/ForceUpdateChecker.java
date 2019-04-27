@@ -41,7 +41,6 @@ public class ForceUpdateChecker {
         if (remoteConfig.getBoolean(KEY_UPDATE_REQUIRED)) {
             String currentVersion = remoteConfig.getString(KEY_CURRENT_VERSION);
             String appVersion = getAppVersion(context);
-            Toast.makeText(context,"Here:"+appVersion,Toast.LENGTH_SHORT).show();
             String updateUrl = remoteConfig.getString(KEY_UPDATE_URL);
 
             if (!TextUtils.equals(currentVersion, appVersion)
