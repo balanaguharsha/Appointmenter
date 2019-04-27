@@ -80,13 +80,16 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
     protected void onStart() {
         super.onStart();
         FirebaseUser currentUser=firebaseAuth.getCurrentUser();
-        if(currentUser!=null){
-            Intent in = new Intent(this,BookAppointment.class);
-            in.putExtra("name","trial");
-            in.putExtra("username","something");
+
+
+        if(currentUser!=null) {
+            Intent in = new Intent(this, BookAppointment.class);
+            in.putExtra("name", "trial");
+            in.putExtra("username", "something");
             startActivity(in);
             finish();
         }
+
     }
 
     @Override
@@ -182,8 +185,8 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
                     Toast.makeText(getApplicationContext(),"Detected as email!", Toast.LENGTH_SHORT).show();
 
                     Intent gotoAppointment=new Intent(getApplicationContext(),BookAppointment.class);
-                    gotoAppointment.putExtra("name",name[0]);
-                    gotoAppointment.putExtra("username",name[1]);
+                    gotoAppointment.putExtra("name","some");
+                    gotoAppointment.putExtra("username","thing");
                     startActivity(gotoAppointment);
                     finish();
                 }

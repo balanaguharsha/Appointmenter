@@ -28,6 +28,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -49,6 +50,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
     static Calendar dateGiven;
     TextView datePicked,timePicked;
     TextInputEditText duration;
+    FirebaseAuth mAuth;
     static Time timeGiven;
     static int gYear,gMonth,gDay;
     final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -69,7 +71,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_book_appointment);
-
+        mAuth=FirebaseAuth.getInstance();
 //        Button b=findViewById(R.id.count);
 //        b.setOnClickListener(new View.OnClickListener() {
 //            @Override
@@ -300,6 +302,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
     public boolean onOptionsItemSelected(MenuItem item) {
         if(item.getItemId()==R.id.logout){
             Intent in=new Intent(this,EntryActivity.class);
+            mAuth.signOut();
             Toast.makeText(this,"See you soon...\n(When you want to meet ma'am :p)",Toast.LENGTH_SHORT).show();
             startActivity(in);
 

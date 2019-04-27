@@ -1,6 +1,7 @@
 package com.example.researcher.appointmenter;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TextInputLayout;
@@ -45,7 +46,7 @@ public class RegisterActivity extends AppCompatActivity {
     final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     Boolean userNameAvailable=false,emailValid=false,isStrongPassword=false;
-    TextInputLayout emailLayout;
+    TextInputLayout emailLayout,passwordLayout;
     TextView availability;
     Button register,check;
     FirebaseAuth firebaseAuth;
@@ -57,8 +58,10 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
+        firebaseAuth=FirebaseAuth.getInstance();
         password=(EditText)findViewById(R.id.password);
         emailLayout=(TextInputLayout)findViewById(R.id.emailLayout);
+        passwordLayout=findViewById(R.id.passwordLayout);
         List<String> spinnerArray =  new ArrayList<String>();
         spinnerArray.add("B.Tech. (Research project)");
         spinnerArray.add("M.Tech. (Research project)");
@@ -144,42 +147,51 @@ public class RegisterActivity extends AppCompatActivity {
                 user.put("stage",sItems1.getSelectedItem().toString());
 
                 user.put("password", md5(password.getText().toString()));
-                db.collection("users")
-                        .add(user)
-                        .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+
+
+                firebaseAuth.createUserWithEmailAndPassword(email.getText().toString(),password.getText().toString())
+                        .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
                             @Override
-                            public void onSuccess(DocumentReference documentReference) {
-                                Toast.makeText(getApplicationContext(),"Success",Toast.LENGTH_SHORT).show();
+                            public void onComplete(@NonNull Task<AuthResult> task) {
+                                if(task.isSuccessful()){
+                                    db.collection("users")
+                                            .add(user)
+                                            .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                                @Override
+                                                public void onSuccess(DocumentReference documentReference) {
+                                                    Toast.makeText(getApplicationContext(),"Success",Toast.LENGTH_SHORT).show();
+
+                                                }
+
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+
+
+                                                    Toast.makeText(getApplicationContext(),"Failure:"+e.toString(),Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
+                                    Intent gotoLogin = new Intent(getApplicationContext(),EntryActivity.class);
+                                    startActivity(gotoLogin);
+                                    finish();
+                                }
+                                else{
+                                    Toast.makeText(getApplicationContext(),"Error occurred:(\nPlease try again!",Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
 
                             }
-
                         })
                         .addOnFailureListener(new OnFailureListener() {
                             @Override
                             public void onFailure(@NonNull Exception e) {
-                                firebaseAuth.createUserWithEmailAndPassword(email.getText().toString(),password.getText().toString())
-                                        .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
-                                            @Override
-                                            public void onComplete(@NonNull Task<AuthResult> task) {
-                                                if(task.isSuccessful()){
-                                                    Intent gotoLogin = new Intent(getApplicationContext(),EntryActivity.class);
-                                                    startActivity(gotoLogin);
-                                                    finish();
-                                                }
-                                                else{
-                                                    Toast.makeText(getApplicationContext(),"Something went wrong :(\nPlease try again!",Toast.LENGTH_SHORT).show();
-                                                }
-
-                                            }
-                                        });
-
-                                Toast.makeText(getApplicationContext(),"Failure:"+e.toString(),Toast.LENGTH_SHORT).show();
+                                emailLayout.setError("If this is yours, you are already in!");
+                                Log.d("Error",e.toString());
                             }
-                        });
+                        })
+                ;
 
-
-                Intent gotoLogin = new Intent(getApplicationContext(),EntryActivity.class);
-                startActivity(gotoLogin);
             }
         });
 
@@ -261,6 +273,16 @@ public class RegisterActivity extends AppCompatActivity {
         public void afterTextChanged(Editable s) {
             if(s.length()==0){
                 isItOk.setText("");
+                passwordLayout.setError(null);
+                return;
+            }
+            if(s.length()<6){
+                passwordLayout.setError("Keep typing! minimum 6 characters!");
+                passwordLayout.setErrorTextColor(ColorStateList.valueOf(Color.BLUE));
+                return;
+            }
+            else{
+                passwordLayout.setError(null);
             }
             if(s.length()>0){
                 boolean isdig=false,ischar=false,iscap=false;
