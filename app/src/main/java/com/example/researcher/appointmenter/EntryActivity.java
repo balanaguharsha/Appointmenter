@@ -23,8 +23,10 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
@@ -38,6 +40,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -83,11 +86,34 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
 
 
         if(currentUser!=null) {
-            Intent in = new Intent(this, BookAppointment.class);
-            in.putExtra("name", "trial");
-            in.putExtra("username", "something");
-            startActivity(in);
-            finish();
+            final Intent in = new Intent(this, BookAppointment.class);
+
+
+            CollectionReference usersRef=db.collection("users");
+
+
+
+            usersRef.whereEqualTo("email",currentUser.getEmail())
+                    .get()
+                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
+
+                            if (task.isSuccessful()) {
+                                for (QueryDocumentSnapshot document : task.getResult()) {
+
+                                    in.putExtra("name",document.get("name").toString());
+                                    in.putExtra("username",document.get("username").toString());
+                                    startActivity(in);
+                                    finish();
+                                }
+                            }
+                        }
+                    });
+
+
+
+
         }
 
     }
@@ -98,15 +124,12 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_entry);
 
-        firebaseAuth=FirebaseAuth.getInstance();
-
-
-
-
         FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
                 .setPersistenceEnabled(false)
                 .build();
         db.setFirestoreSettings(settings);
+        firebaseAuth=FirebaseAuth.getInstance();
+
         isMaamIn=findViewById(R.id.isMaamIn);
 
         final DocumentReference docRef = db.collection("features").document("isMaamIn");
@@ -176,66 +199,105 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
     }
     public void checkingUserName(){
         final String[] name = new String[2];
-        CollectionReference usersRef = db.collection("users");
+        final CollectionReference usersRef = db.collection("users");
 
-        firebaseAuth.signInWithEmailAndPassword(userName.getText().toString(),password.getText().toString()).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+        firebaseAuth.signInWithEmailAndPassword(userName.getText().toString(),md5(password.getText().toString())).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
                 if(task.isSuccessful()){
                     Toast.makeText(getApplicationContext(),"Detected as email!", Toast.LENGTH_SHORT).show();
+                    final Intent gotoAppointment=new Intent(getApplicationContext(),BookAppointment.class);
 
-                    Intent gotoAppointment=new Intent(getApplicationContext(),BookAppointment.class);
-                    gotoAppointment.putExtra("name","some");
-                    gotoAppointment.putExtra("username","thing");
-                    startActivity(gotoAppointment);
-                    finish();
+
+
+
+
+                    usersRef.whereEqualTo("email",userName.getText().toString())
+                            .get()
+                            .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                @Override
+                                public void onComplete(@NonNull Task<QuerySnapshot> task) {
+
+                                    if (task.isSuccessful()) {
+                                        for (QueryDocumentSnapshot document : task.getResult()) {
+                                            gotoAppointment.putExtra("name",document.get("name").toString());
+                                            gotoAppointment.putExtra("username",document.get("username").toString());
+                                            startActivity(gotoAppointment);
+                                            finish();
+                                        }
+                                    }
+                                }
+                            });
+
+
+
+
+
+
                 }
                 else{
                     Toast.makeText(getApplicationContext(),"Detected as username!", Toast.LENGTH_SHORT).show();
+                    final String[] email = new String[1];
+                    usersRef.whereEqualTo("username",userName.getText().toString())
+                            .get()
+                            .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                @Override
+                                public void onComplete(@NonNull Task<QuerySnapshot> task) {
+
+                                    String TAG="RegisterActivity";
+                                    boolean isThere=false,in=false;
+                                    String hashedPassword=md5(password.getText().toString());
+                                    if (task.isSuccessful()) {
+                                        for (QueryDocumentSnapshot document : task.getResult()) {
+                                            if(document.get("password").toString().contentEquals(hashedPassword)) {
+                                                name[0] =document.get("name").toString();
+                                                name[1]=document.get("username").toString();
+                                                email[0] =document.get("email").toString();
+                                                passwordLayout.setError(null);
+                                                isThere = true;
+                                                break;
+                                            }
+                                            in=true;
+                                            userNameLayout.setError(null);
+                                        }
+                                        if(isThere){
+                                            firebaseAuth.signInWithEmailAndPassword(email[0],hashedPassword).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                                                @Override
+                                                public void onComplete(@NonNull Task<AuthResult> task) {
+                                                    if(task.isSuccessful()){
+                                                        Intent gotoAppointment=new Intent(getApplicationContext(),BookAppointment.class);
+                                                        gotoAppointment.putExtra("name",name[0]);
+                                                        gotoAppointment.putExtra("username",name[1]);
+                                                        startActivity(gotoAppointment);
+                                                        finish();
+                                                    }
+                                                    else{
+                                                        Toast.makeText(getApplicationContext(),"Something went wrong :(\nPlease try again!",Toast.LENGTH_SHORT).show();
+                                                    }
+                                                }
+                                            });
+
+                                        }
+                                        else if(in){
+                                            passwordLayout.setError("Calm down! Remember your password");
+                                        }
+                                        else{
+                                            userNameLayout.setError("I doubt if you have registered :|");
+                                        }
+
+                                    } else {
+                                        Toast.makeText(getApplicationContext(),"Do you have internet?",Toast.LENGTH_SHORT).show();
+
+                                    }
+                                }
+                            });
                 }
             }
-        });
+        })
 
-        usersRef.whereEqualTo("username",userName.getText().toString())
-                .get()
-                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+        ;
 
-                        String TAG="RegisterActivity";
-                        boolean isThere=false,in=false;
-                        String hashedPassword=md5(password.getText().toString());
-                        if (task.isSuccessful()) {
-                            for (QueryDocumentSnapshot document : task.getResult()) {
-                                if(document.get("password").toString().contentEquals(hashedPassword)) {
-                                    name[0] =document.get("name").toString();
-                                    name[1]=document.get("username").toString();
-                                    passwordLayout.setError(null);
-                                    isThere = true;
-                                    break;
-                                }
-                                in=true;
-                                userNameLayout.setError(null);
-                            }
-                            if(isThere){
-                                Intent gotoAppointment=new Intent(getApplicationContext(),BookAppointment.class);
-                                gotoAppointment.putExtra("name",name[0]);
-                                gotoAppointment.putExtra("username",name[1]);
-                                startActivity(gotoAppointment);
-                            }
-                            else if(in){
-                                passwordLayout.setError("Calm down! Remember your password");
-                            }
-                            else{
-                                userNameLayout.setError("I doubt if you have registered :|");
-                            }
 
-                        } else {
-                            Toast.makeText(getApplicationContext(),"Do you have internet?",Toast.LENGTH_SHORT).show();
-
-                        }
-                    }
-                });
 
 
 

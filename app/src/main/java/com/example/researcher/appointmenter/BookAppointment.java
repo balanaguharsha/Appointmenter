@@ -3,11 +3,14 @@ package com.example.researcher.appointmenter;
 import android.app.DatePickerDialog;
 import android.app.ProgressDialog;
 import android.app.TimePickerDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TextInputEditText;
 import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.DialogFragment;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import java.util.Calendar;
@@ -44,7 +47,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class BookAppointment extends AppCompatActivity implements DatePickerDialog.OnDateSetListener,TimePickerDialog.OnTimeSetListener {
+public class BookAppointment extends AppCompatActivity implements DatePickerDialog.OnDateSetListener,TimePickerDialog.OnTimeSetListener , ForceUpdateChecker.OnUpdateNeededListener {
     TextView name;
     TextInputLayout durationLayout;
     static Calendar dateGiven;
@@ -71,6 +74,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_book_appointment);
+        ForceUpdateChecker.with(this).onUpdateNeeded(this).check();
         mAuth=FirebaseAuth.getInstance();
 //        Button b=findViewById(R.id.count);
 //        b.setOnClickListener(new View.OnClickListener() {
@@ -188,7 +192,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 
                                 if (task.isSuccessful()) {
 
-                                int y=0;
+                                    int y=0;
                                     for (QueryDocumentSnapshot document : task.getResult()) {
 //                                        Log.d("hey","Something");
 //                                        y++;
@@ -332,6 +336,35 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         Format formatter;
         formatter = new SimpleDateFormat("h:mm a");
         timePicked.setText("Selected time:\n"+formatter.format(timeGiven));
+    }
+
+    @Override
+    public void onUpdateNeeded(final String updateUrl) {
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Logged in, but...")
+                .setMessage("Please, update app to new version to continue using our app.")
+                .setPositiveButton("Get me that!",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                redirectStore(updateUrl);
+                            }
+                        }).setNegativeButton("I better quit this app!",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                finishAffinity();
+                            }
+                        }).create();
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.setCancelable(false);
+        dialog.show();
+    }
+
+    private void redirectStore(String updateUrl) {
+        final Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
     }
 
 }

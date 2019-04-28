@@ -149,7 +149,7 @@ public class RegisterActivity extends AppCompatActivity {
                 user.put("password", md5(password.getText().toString()));
 
 
-                firebaseAuth.createUserWithEmailAndPassword(email.getText().toString(),password.getText().toString())
+                firebaseAuth.createUserWithEmailAndPassword(email.getText().toString(),md5(password.getText().toString()))
                         .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
                             @Override
                             public void onComplete(@NonNull Task<AuthResult> task) {

@@ -31,7 +31,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:singleLine="true"
-            android:hint="Enter username"
+            android:hint="Enter username / email"
             android:textColor="@color/colorPrimary" />
     </android.support.design.widget.TextInputLayout>
 
