@@ -48,6 +48,7 @@ import java.util.regex.Pattern;
 
 public class EntryActivity extends AppCompatActivity implements ForceUpdateChecker.OnUpdateNeededListener {
     static int backButtonCount=0;
+    public boolean consider=false;
     private FirebaseAuth firebaseAuth;
     public String md5(String s) {
         try {
@@ -79,44 +80,7 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
     TextInputEditText userName,password;
     Button entryButton,registerButton;
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        FirebaseUser currentUser=firebaseAuth.getCurrentUser();
 
-
-        if(currentUser!=null) {
-            final Intent in = new Intent(this, BookAppointment.class);
-
-
-            CollectionReference usersRef=db.collection("users");
-
-
-
-            usersRef.whereEqualTo("email",currentUser.getEmail())
-                    .get()
-                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
-
-                            if (task.isSuccessful()) {
-                                for (QueryDocumentSnapshot document : task.getResult()) {
-
-                                    in.putExtra("name",document.get("name").toString());
-                                    in.putExtra("username",document.get("username").toString());
-                                    startActivity(in);
-                                    finish();
-                                }
-                            }
-                        }
-                    });
-
-
-
-
-        }
-
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,13 +88,11 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_entry);
 
-        FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
-                .setPersistenceEnabled(false)
-                .build();
-        db.setFirestoreSettings(settings);
+
         firebaseAuth=FirebaseAuth.getInstance();
 
         isMaamIn=findViewById(R.id.isMaamIn);
+
 
         final DocumentReference docRef = db.collection("features").document("isMaamIn");
         docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
@@ -142,8 +104,10 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
                     return;
                 }
 
-                if (snapshot != null && snapshot.exists()) {
+                if (consider && snapshot != null && snapshot.exists()) {
+
                     boolean isIn=Boolean.parseBoolean(snapshot.get("isMaamIn").toString());
+
                     if(isIn){
                         isMaamIn.setTextColor(Color.GREEN);
                         isMaamIn.setText("Status:\nMa'am is in her cabin!");
@@ -160,7 +124,34 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
                 }
             }
         });
+        final DocumentReference docRef1 = db.collection("features").document("isMaamIn");
+        docRef1.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot snapshot,
+                                @Nullable FirebaseFirestoreException e) {
+                if (e != null) {
+                    Log.w(TAG, "Listen failed.", e);
+                    return;
+                }
 
+                if (snapshot != null && snapshot.exists()) {
+                    boolean isIn=Boolean.parseBoolean(snapshot.get("isMaamIn").toString());
+                    if(!isIn){
+                        isMaamIn.setTextColor(Color.GREEN);
+                        isMaamIn.setText("Status:\nMa'am is in her cabin!");
+
+
+                    }
+                    else{
+                        isMaamIn.setTextColor(Color.RED);
+                        isMaamIn.setText("Status:\nMa'am is not in her cabin\n(Her car's presence can give a clue!)");
+                    }
+
+                } else {
+                    Log.d(TAG, "Current data: null");
+                }
+            }
+        });
 
 
 
@@ -200,8 +191,11 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
     public void checkingUserName(){
         final String[] name = new String[2];
         final CollectionReference usersRef = db.collection("users");
-
-        firebaseAuth.signInWithEmailAndPassword(userName.getText().toString(),md5(password.getText().toString())).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+        String temp=userName.getText().toString();
+        if(temp.isEmpty()){
+            temp="default";
+        }
+        firebaseAuth.signInWithEmailAndPassword(temp,md5(password.getText().toString())).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
                 if(task.isSuccessful()){

@@ -8,6 +8,16 @@
         app:showAsAction="ifRoom"
         ></item>
     <item
+        android:id="@+id/editProfile"
+        android:title="Edit profile"
+        app:showAsAction="never"
+        ></item>
+    <item
+        android:id="@+id/request"
+        android:title="Demand feature"
+        app:showAsAction="never"
+        ></item>
+    <item
         android:id="@+id/appointments"
         android:title="Booked appointments"
         app:showAsAction="never"

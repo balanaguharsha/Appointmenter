@@ -5,14 +5,20 @@ import android.app.ProgressDialog;
 import android.app.TimePickerDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.TextInputEditText;
 import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+
+import java.util.ArrayList;
 import java.util.Calendar;
 
 import android.util.Log;
@@ -20,8 +26,10 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.DatePicker;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
@@ -34,7 +42,10 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
@@ -45,6 +56,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class BookAppointment extends AppCompatActivity implements DatePickerDialog.OnDateSetListener,TimePickerDialog.OnTimeSetListener , ForceUpdateChecker.OnUpdateNeededListener {
@@ -66,8 +78,8 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 
     Date dateAfter;
 
-
-
+    Spinner typeOfMeeting;
+    TextView isMaamIn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +87,20 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 
         setContentView(R.layout.activity_book_appointment);
         ForceUpdateChecker.with(this).onUpdateNeeded(this).check();
+        checkFirstRun();
         mAuth=FirebaseAuth.getInstance();
+        typeOfMeeting=findViewById(R.id.typeOfMeeting);
+
+        List<String> spinnerArray1 =  new ArrayList<String>();
+        spinnerArray1.add("Individual meeting");
+        spinnerArray1.add("Group meeting");
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+                this, android.R.layout.simple_spinner_item, spinnerArray1);
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+//
+        typeOfMeeting.setAdapter(adapter);
 //        Button b=findViewById(R.id.count);
 //        b.setOnClickListener(new View.OnClickListener() {
 //            @Override
@@ -105,6 +130,8 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 //
 //            }
 //        });
+
+
         userName=getIntent().getStringExtra("username");
         name=findViewById(R.id.name);
         durationLayout=findViewById(R.id.durationLayout);
@@ -117,6 +144,45 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         timePicked.setText("Pick a time!");
         date=findViewById(R.id.date);
         time=findViewById(R.id.time);
+        isMaamIn=findViewById(R.id.isMaamIn);
+
+        final DocumentReference docRef = db.collection("features").document("isMaamIn");
+        docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            private static final String TAG = "BookActivity";
+
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot snapshot,
+                                @Nullable FirebaseFirestoreException e) {
+                if (e != null) {
+                    Log.w(TAG, "Listen failed.", e);
+
+                    return;
+                }
+
+                if (snapshot != null && snapshot.exists()) {
+                    boolean isIn=Boolean.parseBoolean(snapshot.get("isMaamIn").toString());
+                    if(isIn){
+                        isMaamIn.setTextColor(Color.GREEN);
+                        isMaamIn.setText("Status:\nMa'am is in her cabin!");
+
+
+                    }
+                    else{
+                        isMaamIn.setTextColor(Color.RED);
+                        isMaamIn.setText("Status:\nMa'am is not in her cabin\n(Her car's presence can give a clue!)");
+                    }
+
+                } else {
+                    Log.d(TAG, "Current data: null");
+                }
+            }
+        });
+
+
+
+
+
+
         duration.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -148,7 +214,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 
 
 
-
+                appointment.put("typeOfMeeting",typeOfMeeting.getSelectedItem().toString());
                 appointment.put("hour",timeGiven.getHours());
                 appointment.put("minute",timeGiven.getMinutes());
                 appointment.put("day",gDay);
@@ -157,6 +223,9 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
                 appointment.put("username",userName);
                 appointment.put("name",getIntent().getStringExtra("name"));
                 appointment.put("endtime","");
+                appointment.put("StartedAt",null);
+                appointment.put("isEnded",false);
+                appointment.put("EndedAt",null);
                 appointment.put("duration",durationTime);
                 appointment.put("Accepted",false);
                 Calendar now=Calendar.getInstance();
@@ -198,21 +267,26 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 //                                        y++;
                                         Date dateCurr;
                                         Date endDate;
-//                                        Calendar now1=Calendar.getInstance();
-//                                        now1.set(Calendar.YEAR,Integer.parseInt(document.get("year").toString()));
-//                                        now1.set(Calendar.MONTH,Integer.parseInt(document.get("month").toString()));
-//                                        now1.set(Calendar.DAY_OF_MONTH,Integer.parseInt(document.get("day").toString()));
-//                                        now1.set(Calendar.MINUTE,Integer.parseInt(document.get("minute").toString()));
-//                                        now1.set(Calendar.HOUR_OF_DAY,Integer.parseInt(document.get("hour").toString()));
-//                                        dateCurr=now1.getTime();
-//                                        now1.add(Calendar.MINUTE,Integer.parseInt(document.get("duration").toString()));
-//                                        endDate=now1.getTime();
+//
+                                        try {
 
-                                        Timestamp dateStamp = (Timestamp) document.get("StartTime");
-                                        dateCurr=dateStamp.toDate();
+                                            Timestamp dateStamp = (Timestamp) document.get("StartTime");
+                                            dateCurr = dateStamp.toDate();
 
-                                        dateStamp = (Timestamp) document.get("EndTime");
-                                        endDate=dateStamp.toDate();
+                                            dateStamp = (Timestamp) document.get("EndTime");
+                                            endDate = dateStamp.toDate();
+                                        }
+                                        catch(Exception e){
+                                            Calendar now1=Calendar.getInstance();
+                                        now1.set(Calendar.YEAR,Integer.parseInt(document.get("year").toString()));
+                                        now1.set(Calendar.MONTH,Integer.parseInt(document.get("month").toString()));
+                                        now1.set(Calendar.DAY_OF_MONTH,Integer.parseInt(document.get("day").toString()));
+                                        now1.set(Calendar.MINUTE,Integer.parseInt(document.get("minute").toString()));
+                                        now1.set(Calendar.HOUR_OF_DAY,Integer.parseInt(document.get("hour").toString()));
+                                        dateCurr=now1.getTime();
+                                        now1.add(Calendar.MINUTE,Integer.parseInt(document.get("duration").toString()));
+                                        endDate=now1.getTime();
+                                        }
 
 
 
@@ -320,6 +394,26 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 
 
         }
+        else if(item.getItemId()==R.id.request){
+            Intent in=new Intent(this,request_feature.class);
+            in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            in.putExtra("username",userName);
+            in.putExtra("name",getIntent().getStringExtra("name"));
+            startActivity(in);
+
+
+        }
+        else if(item.getItemId()==R.id.editProfile){
+            Toast.makeText(getApplicationContext(),"In development!",Toast.LENGTH_SHORT).show();
+            return true;
+
+//            Intent in=new Intent(this,EditProfile.class);
+//            in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+//            in.putExtra("username",userName);
+//            in.putExtra("name",getIntent().getStringExtra("name"));
+//            startActivity(in);
+
+        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -351,6 +445,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
                             }
                         }).setNegativeButton("I better quit this app!",
                         new DialogInterface.OnClickListener() {
+                            @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 finishAffinity();
@@ -366,5 +461,43 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }
+    public void checkFirstRun() {
+        boolean isFirstRun = getSharedPreferences("PREFERENCE", MODE_PRIVATE).getBoolean("ver1_5_3", true);
+        if (isFirstRun) {
+            AlertDialog dialog = new AlertDialog.Builder(this)
+                    .setTitle("What's new!")
+                    .setMessage("1. Demand feature option added to menu\n\n2. Status of appointments is added")
+                    .setPositiveButton("That's good!",
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    Toast.makeText(getApplicationContext(),"Thanks! :)",Toast.LENGTH_SHORT).show();
+                                    dialog.dismiss();
+                                }
+                            })
+                    .setNegativeButton("Do I need it?", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            Toast.makeText(getApplicationContext(),"But we need it :)",Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        }
+                    })
+
+                    .create()
+
+
+                    ;
+
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.setCancelable(false);
+            dialog.show();
+
+            getSharedPreferences("PREFERENCE", MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("ver1_5_3", false)
+                    .apply();
+        }
+    }
+
 
 }

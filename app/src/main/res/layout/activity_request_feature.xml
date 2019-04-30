@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".request_feature">
+
+    <android.support.design.widget.TextInputLayout
+
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="50dp"
+        android:id="@+id/requestLayout"
+        android:paddingBottom="10dp"
+        app:helperText="Only relevant please"
+        app:helperTextEnabled="true">
+
+        <android.support.design.widget.TextInputEditText
+            android:id="@+id/feature"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:hint="Demand a feature"
+            android:singleLine="true"
+            android:textColor="@color/colorPrimary" />
+
+    </android.support.design.widget.TextInputLayout>
+
+    <Button
+        android:id="@+id/request"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+      android:background="@drawable/entry_button"
+        android:textColor="#fff"
+        android:textAllCaps="false"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:text="Demand it!" />
+
+
+</LinearLayout>
