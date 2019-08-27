@@ -19,6 +19,7 @@
         android:layout_height="wrap_content"
         android:background="@drawable/entry_button"
         android:text="TextView"
+        android:padding="5dp"
         android:textAlignment="center"
         android:textAllCaps="false"
         android:textColor="#ffff"

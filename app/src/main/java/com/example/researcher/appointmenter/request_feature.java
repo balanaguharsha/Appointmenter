@@ -53,6 +53,8 @@ public class request_feature extends AppCompatActivity {
                 }
                 featurereq.put("Feature",featureRequested);
                 featurereq.put("Requested by",getIntent().getStringExtra("username"));
+                featurereq.put("name",getIntent().getStringExtra("name"));
+
                 db.collection("featuresRequested")
                         .add(featurereq)
                         .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {

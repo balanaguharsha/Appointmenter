@@ -1,6 +1,7 @@
 package com.example.researcher.appointmenter;
 
 import android.app.DatePickerDialog;
+import android.app.DownloadManager;
 import android.app.ProgressDialog;
 import android.app.TimePickerDialog;
 import android.content.DialogInterface;
@@ -8,6 +9,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
@@ -34,6 +36,13 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -49,6 +58,10 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONArray;
+
 import java.sql.Time;
 import java.text.DateFormat;
 import java.text.Format;
@@ -58,10 +71,18 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
+
+
 
 public class BookAppointment extends AppCompatActivity implements DatePickerDialog.OnDateSetListener,TimePickerDialog.OnTimeSetListener , ForceUpdateChecker.OnUpdateNeededListener {
     TextView name;
     TextInputLayout durationLayout;
+    private long mLastClickTime = 0;
+
+
+
+
     static Calendar dateGiven;
     TextView datePicked,timePicked;
     TextInputEditText duration;
@@ -80,6 +101,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 
     Spinner typeOfMeeting;
     TextView isMaamIn;
+    TextView isSlot;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +116,10 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         List<String> spinnerArray1 =  new ArrayList<String>();
         spinnerArray1.add("Individual meeting");
         spinnerArray1.add("Group meeting");
+        spinnerArray1.add("Assignment Discussion");
+        spinnerArray1.add("Staff meeting");
+
+        //spinnerArray1.add("Research meeting");
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(
                 this, android.R.layout.simple_spinner_item, spinnerArray1);
 
@@ -136,7 +162,24 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         name=findViewById(R.id.name);
         durationLayout=findViewById(R.id.durationLayout);
         duration=findViewById(R.id.duration);
-        name.setText("Hey " + getIntent().getStringExtra("name").toUpperCase()+" !!!\nWelcome to our Appointmenter!\nLet's book an appointment,\nAfter all that is the reason you are here, isn't it???");
+        Calendar c = Calendar.getInstance();
+        String wish="";
+        int timeOfDay = c.get(Calendar.HOUR_OF_DAY);
+
+        if(timeOfDay >= 0 && timeOfDay < 12){
+            wish="Good Morning";
+        }else if(timeOfDay >= 12 && timeOfDay < 16){
+            wish="Good Afternoon";
+        }else if(timeOfDay >= 16 && timeOfDay < 21){
+            wish="Good Evening";
+        }else if(timeOfDay >= 21 && timeOfDay < 24){
+            wish="Good Night";
+        }
+        String nameActual=getIntent().getStringExtra("name");
+        String temp=nameActual.charAt(0)+"";
+        temp=temp.toUpperCase();
+        nameActual=temp+nameActual.substring(1);
+        name.setText(wish+",\n "+nameActual);
         datePicked=findViewById(R.id.selectedDate);
         timePicked=findViewById(R.id.selectedTime);
         check=findViewById(R.id.check);
@@ -145,6 +188,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         date=findViewById(R.id.date);
         time=findViewById(R.id.time);
         isMaamIn=findViewById(R.id.isMaamIn);
+        isSlot=findViewById(R.id.isSlot);
 
         final DocumentReference docRef = db.collection("features").document("isMaamIn");
         docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
@@ -179,6 +223,89 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         });
 
 
+        Date d1=new Date();
+        Calendar cal11 = Calendar.getInstance();
+        cal11.setTime(d1);
+        int year = cal11.get(Calendar.YEAR);
+        int month = cal11.get(Calendar.MONTH);
+        int day = cal11.get(Calendar.DAY_OF_MONTH);
+
+        Log.d("date",year+"-"+(month+1)+"-"+day);
+
+        final RequestQueue queue1 = Volley.newRequestQueue(this);
+        //https://bookcalender.herokuapp.com/getSlot
+        //http://192.168.43.82:5000/getSlot
+        final String url1 = "https://bookcalender.herokuapp.com/getSlot"; // your URL
+
+        queue1.start();
+
+        HashMap<String, String> params1 = new HashMap<String,String>();
+        params1.put("date",(year+"-"+(month+1)+"-"+day).toString());
+
+        params1.put("time",(year+"-"+(month+1)+"-"+day)+" "+"00:40");
+
+        params1.put("time1",(year+"-"+(month+1)+"-"+day)+" "+"23:40");
+
+        JsonObjectRequest jsObjRequest1 = new
+                JsonObjectRequest(Request.Method.POST,
+                url1,
+                new JSONObject(params1),
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            String str=response.getString("slot");
+                            String str1[]=str.split("&");
+                            isSlot.setTextColor(Color.RED);
+                            isSlot.setText("Today Ma'am Busy Hours :-\n\n");
+                            for(int i=0;i<str1.length;i++){
+                                Log.d("backend", str1[i]);
+                                isSlot.append(str1[i]+"\n");
+                            }
+                            Log.d("backend", str);
+
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.d("back",error.toString()+"     "+error.getMessage());
+
+            }
+
+        });
+        jsObjRequest1.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+        queue1.add(jsObjRequest1);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -189,9 +316,21 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
                 durationLayout.setError(null);
             }
         });
+
+
+        final RequestQueue queue = Volley.newRequestQueue(this);
+        //https://bookcalender.herokuapp.com/checkCal
+        //http://192.168.43.82:5000/checkCal
+        final String url = "https://bookcalender.herokuapp.com/checkCal"; // your URL
+
+
         check.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (SystemClock.elapsedRealtime() - mLastClickTime < 10000){
+                    return;
+                }
+                mLastClickTime = SystemClock.elapsedRealtime();
                 String tempDuration=duration.getText().toString();
                 if(datePicked.getText().toString().equals("Pick a date!")){
                     Toast.makeText(getApplicationContext(),"Sadly, We don't know the date",Toast.LENGTH_SHORT).show();
@@ -204,7 +343,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
                 if(tempDuration.isEmpty()){
                     tempDuration="0";
                 }
-                int durationTime=Integer.parseInt(tempDuration);
+                final int durationTime=Integer.parseInt(tempDuration);
                 if(durationTime<=0){
                     durationLayout.setError("Enter a valid duration!");
                     return;
@@ -213,131 +352,216 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 
 
 
+                queue.start();
 
-                appointment.put("typeOfMeeting",typeOfMeeting.getSelectedItem().toString());
-                appointment.put("hour",timeGiven.getHours());
-                appointment.put("minute",timeGiven.getMinutes());
-                appointment.put("day",gDay);
-                appointment.put("month",gMonth);
-                appointment.put("year",gYear);
-                appointment.put("username",userName);
-                appointment.put("name",getIntent().getStringExtra("name"));
-                appointment.put("endtime","");
-                appointment.put("StartedAt",null);
-                appointment.put("isEnded",false);
-                appointment.put("EndedAt",null);
-                appointment.put("duration",durationTime);
-                appointment.put("Accepted",false);
-                Calendar now=Calendar.getInstance();
-                now.set(Calendar.YEAR,gYear);
-                now.set(Calendar.MONTH,gMonth);
-                now.set(Calendar.DAY_OF_MONTH,gDay);
-                now.set(Calendar.MINUTE,timeGiven.getMinutes());
-                now.set(Calendar.HOUR_OF_DAY,timeGiven.getHours());
-                selected=now.getTime();
-                appointment.put("StartTime",new Timestamp(selected));
+                HashMap<String, String> params = new HashMap<String,String>();
+                // the entered data as the body.
+
+                Calendar now1=Calendar.getInstance();
+                now1.set(Calendar.YEAR,gYear);
+                now1.set(Calendar.MONTH,gMonth);
+                now1.set(Calendar.DAY_OF_MONTH,gDay);
+                now1.set(Calendar.MINUTE,timeGiven.getMinutes());
+                now1.set(Calendar.HOUR_OF_DAY,timeGiven.getHours());
+                selected=now1.getTime();
 
 
-                now.add(Calendar.MINUTE,durationTime);
-                dateAfter=now.getTime();
-                appointment.put("EndTime",new Timestamp(dateAfter));
+                now1.add(Calendar.MINUTE,durationTime);
+                dateAfter=now1.getTime();
 
-                Log.d("hey",selected.toString()+",,,"+dateAfter.toString()+"********8" +
-                        "");
-                Date dateobj = new Date();
-                if(selected.before(dateobj)){
-                    Log.d("Hey",dateobj.toString()+",,,"+selected.toString());
-                    Toast.makeText(getApplicationContext(),"Time and tide waits for none!\nBook an appointment after current date and time...",Toast.LENGTH_LONG).show();
-                    return;
-                }
+                Timestamp ts1=new Timestamp(selected);
+                ts1.toDate();
+                Timestamp ts2=new Timestamp(dateAfter);
+                ts2.toDate();
 
+                params.put("date",(gYear+"-"+(gMonth+1)+"-"+gDay).toString());
 
-
-                db.collection("appointments")
-                        .get()
-                        .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                            @Override
-                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-
-                                if (task.isSuccessful()) {
-
-                                    int y=0;
-                                    for (QueryDocumentSnapshot document : task.getResult()) {
-//                                        Log.d("hey","Something");
-//                                        y++;
-                                        Date dateCurr;
-                                        Date endDate;
+//                params.put("StartTime",(gYear+"-"+(gMonth+1)+"-"+gDay)+" "+timeGiven.getHours()+":"+timeGiven.getMinutes());
 //
-                                        try {
+//                params.put("EndTime",(gYear+"-"+(gMonth+1)+"-"+gDay)+" "+now1.get(Calendar.HOUR_OF_DAY)+":"+now1.get(Calendar.MINUTE));
 
-                                            Timestamp dateStamp = (Timestamp) document.get("StartTime");
-                                            dateCurr = dateStamp.toDate();
+                params.put("StartTime",(ts1.toDate()).toString());
 
-                                            dateStamp = (Timestamp) document.get("EndTime");
-                                            endDate = dateStamp.toDate();
-                                        }
-                                        catch(Exception e){
-                                            Calendar now1=Calendar.getInstance();
-                                        now1.set(Calendar.YEAR,Integer.parseInt(document.get("year").toString()));
-                                        now1.set(Calendar.MONTH,Integer.parseInt(document.get("month").toString()));
-                                        now1.set(Calendar.DAY_OF_MONTH,Integer.parseInt(document.get("day").toString()));
-                                        now1.set(Calendar.MINUTE,Integer.parseInt(document.get("minute").toString()));
-                                        now1.set(Calendar.HOUR_OF_DAY,Integer.parseInt(document.get("hour").toString()));
-                                        dateCurr=now1.getTime();
-                                        now1.add(Calendar.MINUTE,Integer.parseInt(document.get("duration").toString()));
-                                        endDate=now1.getTime();
-                                        }
+                params.put("EndTime", (ts2.toDate()).toString());
+
+                params.put("time",(gYear+"-"+(gMonth+1)+"-"+gDay)+" "+"00:40");
+
+                params.put("time1",(gYear+"-"+(gMonth+1)+"-"+gDay)+" "+"23:40");
+
+                Log.d("backend","----------------------------------------------------------------------");
+                Log.d("backend",(gYear+"-"+gMonth+"-"+gDay).toString());
+                Log.d("backend",(new Timestamp(selected)).toString());
+                Log.d("backend",(gYear+"-"+gMonth+"-"+gDay)+" "+now1.get(Calendar.HOUR_OF_DAY)+":"+now1.get(Calendar.MINUTE));
+                Log.d("backend",(gYear+"-"+gMonth+"-"+gDay)+" "+"05:40");
+                Log.d("backend",(gYear+"-"+gMonth+"-"+gDay)+" "+"23:40");
+
+                JsonObjectRequest jsObjRequest = new
+                        JsonObjectRequest(Request.Method.POST,
+                        url,
+                        new JSONObject(params),
+                        new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    String str=response.getString("status");
+                                    Log.d("backend", str);
+                                    if(str.equalsIgnoreCase("sucess")){
 
 
 
+                                        appointment.put("typeOfMeeting",typeOfMeeting.getSelectedItem().toString());
+                                        appointment.put("hour",timeGiven.getHours());
+                                        appointment.put("minute",timeGiven.getMinutes());
+                                        appointment.put("day",gDay);
+                                        appointment.put("month",gMonth);
+                                        appointment.put("year",gYear);
+                                        appointment.put("username",userName);
+                                        appointment.put("name",getIntent().getStringExtra("name"));
+                                        appointment.put("endtime","");
+                                        appointment.put("StartedAt",null);
+                                        appointment.put("isEnded",false);
+                                        appointment.put("EndedAt",null);
+                                        appointment.put("isRejected",false);
+
+                                        appointment.put("duration",durationTime);
+                                        appointment.put("Accepted",false);
+                                        Calendar now=Calendar.getInstance();
+                                        now.set(Calendar.YEAR,gYear);
+                                        now.set(Calendar.MONTH,gMonth);
+                                        now.set(Calendar.DAY_OF_MONTH,gDay);
+                                        now.set(Calendar.MINUTE,timeGiven.getMinutes());
+                                        now.set(Calendar.HOUR_OF_DAY,timeGiven.getHours());
+                                        selected=now.getTime();
+                                        appointment.put("StartTime",new Timestamp(selected));
 
 
+                                        now.add(Calendar.MINUTE,durationTime);
+                                        dateAfter=now.getTime();
+                                        appointment.put("EndTime",new Timestamp(dateAfter));
 
-                                        Log.d("hey","oyyy\n"+selected.toString()+"\n"+dateCurr.toString()+"\n"+dateAfter.toString()+"\n"+endDate.toString());
-                                        if((dateCurr.before(selected) && selected.before(endDate)) || (dateCurr.before(dateAfter) && dateAfter.before(endDate) ) || (selected.before(dateCurr) && dateAfter.after(endDate) ) ){
-                                            Toast.makeText(getApplicationContext(),"Slot is already booked! Pick an another slot which is after "+endDate.getHours()+":"+endDate.getMinutes(),Toast.LENGTH_SHORT).show();
+                                        Log.d("hey",selected.toString()+",,,"+dateAfter.toString()+"********8" +
+                                                "");
+                                        Date dateobj = new Date();
+                                        if(selected.before(dateobj)){
+                                            Log.d("Hey",dateobj.toString()+",,,"+selected.toString());
+                                            Toast.makeText(getApplicationContext(),"Time and tide waits for none!\nBook an appointment after current date and time...",Toast.LENGTH_LONG).show();
                                             return;
                                         }
 
+
+
+                                        db.collection("appointments")
+                                                .whereEqualTo("Accepted",true)
+                                                .get()
+                                                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                                    @Override
+                                                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+
+                                                        if (task.isSuccessful()) {
+
+                                                            int y=0;
+                                                            for (QueryDocumentSnapshot document : task.getResult()) {
+//                                        Log.d("hey","Something");
+//                                        y++;
+                                                                Date dateCurr;
+                                                                Date endDate;
+//
+                                                                try {
+
+                                                                    Timestamp dateStamp = (Timestamp) document.get("StartTime");
+                                                                    dateCurr = dateStamp.toDate();
+
+                                                                    dateStamp = (Timestamp) document.get("EndTime");
+                                                                    endDate = dateStamp.toDate();
+                                                                }
+                                                                catch(Exception e){
+                                                                    Calendar now1=Calendar.getInstance();
+                                                                    now1.set(Calendar.YEAR,Integer.parseInt(document.get("year").toString()));
+                                                                    now1.set(Calendar.MONTH,Integer.parseInt(document.get("month").toString()));
+                                                                    now1.set(Calendar.DAY_OF_MONTH,Integer.parseInt(document.get("day").toString()));
+                                                                    now1.set(Calendar.MINUTE,Integer.parseInt(document.get("minute").toString()));
+                                                                    now1.set(Calendar.HOUR_OF_DAY,Integer.parseInt(document.get("hour").toString()));
+                                                                    dateCurr=now1.getTime();
+                                                                    now1.add(Calendar.MINUTE,Integer.parseInt(document.get("duration").toString()));
+                                                                    endDate=now1.getTime();
+                                                                }
+
+
+
+
+
+                                                                Log.d("hey","oyyy\n"+selected.toString()+"\n"+dateCurr.toString()+"\n"+dateAfter.toString()+"\n"+endDate.toString());
+
+
+                                                                if((dateCurr.before(selected) && selected.before(endDate)) || (dateCurr.before(dateAfter) && dateAfter.before(endDate) ) || (selected.before(dateCurr) && dateAfter.after(endDate) ) ){
+                                                                    Toast.makeText(getApplicationContext(),"Slot is already booked! Pick an another slot which is after "+endDate.getHours()+":"+endDate.getMinutes(),Toast.LENGTH_SHORT).show();
+                                                                    return;
+                                                                }
+
+                                                            }
+                                                            Log.d("Count in check:",""+y);
+                                                            db.collection("appointments")
+                                                                    .add(appointment)
+                                                                    .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                                                        @Override
+                                                                        public void onSuccess(DocumentReference documentReference) {
+                                                                            Log.d("hey","in adding");
+                                                                            Toast.makeText(getApplicationContext(),"Success",Toast.LENGTH_SHORT).show();
+                                                                            timePicked.setText("Pick a time!");
+                                                                            datePicked.setText("Pick a date!");
+                                                                            duration.setText("");
+
+                                                                        }
+
+                                                                    })
+                                                                    .addOnFailureListener(new OnFailureListener() {
+                                                                        @Override
+                                                                        public void onFailure(@NonNull Exception e) {
+
+                                                                            Toast.makeText(getApplicationContext(),"Failure:"+e.toString(),Toast.LENGTH_SHORT).show();
+                                                                        }
+                                                                    });
+
+
+                                                        } else {
+                                                            Toast.makeText(getApplicationContext(),"Do you have internet?",Toast.LENGTH_SHORT).show();
+
+                                                        }
+                                                    }
+                                                });
+
+
+
+
+
                                     }
-                                    Log.d("Count in check:",""+y);
-                                    db.collection("appointments")
-                                            .add(appointment)
-                                            .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                                @Override
-                                                public void onSuccess(DocumentReference documentReference) {
-                                                    Log.d("hey","in adding");
-                                                    Toast.makeText(getApplicationContext(),"Success",Toast.LENGTH_SHORT).show();
-                                                    timePicked.setText("Pick a time!");
-                                                    datePicked.setText("Pick a date!");
-                                                    duration.setText("");
 
-                                                }
+                                    else {
 
-                                            })
-                                            .addOnFailureListener(new OnFailureListener() {
-                                                @Override
-                                                public void onFailure(@NonNull Exception e) {
+                                        Toast.makeText(getApplicationContext(),"Maam is busy during that slot!\n Pick an another slot",Toast.LENGTH_LONG).show();
+                                        return;
 
-                                                    Toast.makeText(getApplicationContext(),"Failure:"+e.toString(),Toast.LENGTH_SHORT).show();
-                                                }
-                                            });
+                                    }
 
 
-                                } else {
-                                    Toast.makeText(getApplicationContext(),"Do you have internet?",Toast.LENGTH_SHORT).show();
-
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
                                 }
                             }
-                        });
+                        }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.d("back",error.toString()+"     "+error.getMessage());
 
+                    }
 
+                });
+                jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(
+                        10000,
+                        DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                        DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
-
-
-
-
-
+                queue.add(jsObjRequest);
 
 
 
@@ -370,8 +594,74 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         gMonth=month;
         dateGiven.set(Calendar.MONTH,month);
         dateGiven.set(Calendar.DAY_OF_MONTH,dayOfMonth);
-        String currentdatepicked = DateFormat.getDateInstance(DateFormat.FULL).format(dateGiven.getTime());
+        final String currentdatepicked = DateFormat.getDateInstance(DateFormat.FULL).format(dateGiven.getTime());
         datePicked.setText("Selected date:\n"+currentdatepicked);
+
+
+        Log.d("date",year+"-"+(month+1)+"-"+dayOfMonth);
+
+        final RequestQueue queue2 = Volley.newRequestQueue(this);
+        //https://bookcalender.herokuapp.com/getSlot
+        //http://192.168.43.82:5000/getSlot
+        final String url2 = "https://bookcalender.herokuapp.com/getSlot"; // your URL
+
+        queue2.start();
+
+        HashMap<String, String> params2 = new HashMap<String,String>();
+        params2.put("date",(year+"-"+(month+1)+"-"+dayOfMonth).toString());
+
+        params2.put("time",(year+"-"+(month+1)+"-"+dayOfMonth)+" "+"00:40");
+
+        params2.put("time1",(year+"-"+(month+1)+"-"+dayOfMonth)+" "+"23:40");
+
+        JsonObjectRequest jsObjRequest2 = new
+                JsonObjectRequest(Request.Method.POST,
+                url2,
+                new JSONObject(params2),
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            String str=response.getString("slot");
+                            String str1[]=str.split("&");
+                            isSlot.setTextColor(Color.RED);
+                            isSlot.setText("On "+currentdatepicked+" Ma'am Busy Hours :-\n\n");
+                            for(int i=0;i<str1.length;i++){
+                                Log.d("backend", str1[i]);
+                                isSlot.append(str1[i]+"\n");
+                            }
+                            Log.d("backend", str);
+
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.d("back",error.toString()+"     "+error.getMessage());
+
+            }
+
+        });
+        jsObjRequest2.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+        queue2.add(jsObjRequest2);
+
+
+
+
+
+
+
+
+
+
+
 
 
     }
@@ -461,13 +751,14 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }
+    @RequiresApi(api = Build.VERSION_CODES.GINGERBREAD)
     public void checkFirstRun() {
-        boolean isFirstRun = getSharedPreferences("PREFERENCE", MODE_PRIVATE).getBoolean("ver1_5_3", true);
+        boolean isFirstRun = getSharedPreferences("PREFERENCE", MODE_PRIVATE).getBoolean("ver1_6_2", true);
         if (isFirstRun) {
             AlertDialog dialog = new AlertDialog.Builder(this)
                     .setTitle("What's new!")
-                    .setMessage("1. Demand feature option added to menu\n\n2. Status of appointments is added")
-                    .setPositiveButton("That's good!",
+                    .setMessage("1. Now you can request the slot by checking the busy hours after selecting the date!\n")
+                    .setPositiveButton("That's Ok!",
                             new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
@@ -475,13 +766,13 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
                                     dialog.dismiss();
                                 }
                             })
-                    .setNegativeButton("Do I need it?", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            Toast.makeText(getApplicationContext(),"But we need it :)",Toast.LENGTH_SHORT).show();
-                            dialog.dismiss();
-                        }
-                    })
+//                    .setNegativeButton("Can you send a mail on rejection?", new DialogInterface.OnClickListener() {
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//                            Toast.makeText(getApplicationContext(),"Please use the demand feature option!",Toast.LENGTH_LONG).show();
+//                            dialog.dismiss();
+//                        }
+//                    })
 
                     .create()
 
@@ -494,7 +785,7 @@ public class BookAppointment extends AppCompatActivity implements DatePickerDial
 
             getSharedPreferences("PREFERENCE", MODE_PRIVATE)
                     .edit()
-                    .putBoolean("ver1_5_3", false)
+                    .putBoolean("ver1_6_2", false)
                     .apply();
         }
     }

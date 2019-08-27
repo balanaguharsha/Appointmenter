@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -41,6 +42,8 @@ public class BookedAppointments extends AppCompatActivity {
     final FirebaseFirestore db = FirebaseFirestore.getInstance();
     ListView Appointments;
     static int type = 0;
+    private long mLastClickTime = 0;
+    private long mLastClickTimeForRefresh = 0;
     myAdapter myAdapter;
     final ArrayList<String> dataset = new ArrayList<>();
     final ArrayList<String> datasetNotAccepted = new ArrayList<>();
@@ -60,7 +63,7 @@ public class BookedAppointments extends AppCompatActivity {
         Appointments.setAdapter(myAdapter);
         Appointments.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
                 if(dataset.get(position).toString().charAt(0)=='F'){
                     Toast.makeText(getApplicationContext(),"Can't cancel appointments which are finished!",Toast.LENGTH_SHORT).show();
                     return true;
@@ -72,8 +75,14 @@ public class BookedAppointments extends AppCompatActivity {
                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                 @Override
                                 public void onSuccess(Void aVoid) {
-                                    onRefresh();
+
+                                    if(dataset.get(position).charAt(0)=='R')
+                                    Toast.makeText(getApplicationContext(), "Rejected Appointment removed from your list!", Toast.LENGTH_LONG).show();
+
+                                    else
                                     Toast.makeText(getApplicationContext(), "Appointment deleted!\nHere on make sure you book it only when required!", Toast.LENGTH_LONG).show();
+                                    onRefresh();
+
                                 }
                             })
                             .addOnFailureListener(new OnFailureListener() {
@@ -89,8 +98,9 @@ public class BookedAppointments extends AppCompatActivity {
                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                 @Override
                                 public void onSuccess(Void aVoid) {
-                                    onRefresh();
                                     Toast.makeText(getApplicationContext(), "Appointment deleted!\nHere on make sure you book it only when required!", Toast.LENGTH_LONG).show();
+
+                                    onRefresh();
                                 }
                             })
                             .addOnFailureListener(new OnFailureListener() {
@@ -107,8 +117,9 @@ public class BookedAppointments extends AppCompatActivity {
                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                 @Override
                                 public void onSuccess(Void aVoid) {
-                                    onRefresh();
                                     Toast.makeText(getApplicationContext(), "Appointment deleted!\nHere on make sure you book it only when required!", Toast.LENGTH_LONG).show();
+
+                                    onRefresh();
                                 }
                             })
                             .addOnFailureListener(new OnFailureListener() {
@@ -134,6 +145,16 @@ public class BookedAppointments extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             for (QueryDocumentSnapshot document : task.getResult()) {
                                 docIds.add(document.getId());
+                                Boolean isRejected;
+                                if(document.getBoolean("isRejected")==null){
+                                    isRejected=false;
+                                }
+                                else
+                                    isRejected=document.getBoolean("isRejected");
+                                if(isRejected){
+                                    dataset.add("RAccepted       :\nFrom " + document.get("hour") + ":" + document.get("minute") + " for " + document.get("duration") + " minutes");
+                                    continue;
+                                }
                                 if (Boolean.parseBoolean(document.get("Accepted").toString())) {
                                     String status = document.get("endtime").toString();
                                     if (status.contentEquals("2") || status.contentEquals( "3"))
@@ -168,6 +189,11 @@ public class BookedAppointments extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.back) {
+            if (SystemClock.elapsedRealtime() - mLastClickTime < 10000){
+
+                return true;
+            }
+            mLastClickTime = SystemClock.elapsedRealtime();
             Intent in = new Intent(this, BookAppointment.class);
             in.putExtra("username", getIntent().getStringExtra("username"));
             in.putExtra("name", getIntent().getStringExtra("name"));
@@ -175,6 +201,7 @@ public class BookedAppointments extends AppCompatActivity {
             startActivity(in);
 
         } else if (item.getItemId() == R.id.Accepted) {
+
             type = 1;
             docIdsSub.clear();
             Appointments.setAdapter(myAdapter);
@@ -202,6 +229,11 @@ public class BookedAppointments extends AppCompatActivity {
             Appointments.setAdapter(myAdapter);
             return true;
         } else if (item.getItemId() == R.id.refresh) {
+            if (SystemClock.elapsedRealtime() - mLastClickTimeForRefresh < 3000){
+
+                return true;
+            }
+            mLastClickTimeForRefresh = SystemClock.elapsedRealtime();
             onRefresh();
             return true;
 
@@ -230,8 +262,19 @@ public class BookedAppointments extends AppCompatActivity {
                             for (QueryDocumentSnapshot document : task.getResult()) {
 
                                 docIds.add(document.getId());
+                                Boolean isRejected;
+                                if(document.getBoolean("isRejected")==null){
+                                    isRejected=false;
+                                }
+                                else
+                                    isRejected=document.getBoolean("isRejected");
+                                if(isRejected){
+                                    dataset.add("RAccepted       :\nFrom " + document.get("hour") + ":" + document.get("minute") + " for " + document.get("duration") + " minutes");
+                                    continue;
+                                }
                                 if (Boolean.parseBoolean(document.get("Accepted").toString())) {
                                     String status = document.get("endtime").toString();
+
                                     if (status.contentEquals("2") || status.contentEquals( "3"))
                                         dataset.add("FAccepted       :\nFrom " + document.get("hour") + ":" + document.get("minute") + " for " + document.get("duration") + " minutes");
                                     else
@@ -327,25 +370,39 @@ public class BookedAppointments extends AppCompatActivity {
                     title.setBackgroundColor(Color.RED);
                     title.setTextSize(30);
                     title.setText("Not Accepted");
+                    full.setTextColor(Color.BLACK);
 
 
                 } else if (g=='F') {
                     title.setBackgroundColor(Color.BLACK);
                     title.setTextSize(30);
                     title.setText("Finished");
+                    full.setTextColor(Color.BLACK);
                     full.setText(dataset.get(position).substring(18));
 
                     return v;
 
-                } else {
+                }
+                else if (g=='R') {
+                    title.setBackgroundColor(Color.BLACK);
+                    title.setTextSize(30);
+                    title.setText("Rejected");
+                    full.setTextColor(Color.BLACK);
+                    full.setText(dataset.get(position).substring(18));
+
+                    return v;
+
+                }
+                else {
 
                     title.setBackgroundColor(Color.BLUE);
                     title.setTextSize(30);
                     title.setText("Accepted");
+                    full.setTextColor(Color.BLACK);
 
                 }
 
-
+                full.setTextColor(Color.BLACK);
                 full.setText(dataset.get(position).substring(18));
             } else if (type == 1) {
                 title.setBackgroundColor(Color.BLUE);
@@ -353,7 +410,7 @@ public class BookedAppointments extends AppCompatActivity {
                 title.setText("Accepted");
 
                 full.setText(dataset.get(position).substring(18));
-
+                full.setTextColor(Color.BLACK);
 
             } else {
                 title.setBackgroundColor(Color.RED);
@@ -361,6 +418,7 @@ public class BookedAppointments extends AppCompatActivity {
                 title.setTextSize(30);
                 title.setText("Not Accepted");
                 full.setText(dataset.get(position).substring(18));
+                full.setTextColor(Color.BLACK);
 
             }
             return v;

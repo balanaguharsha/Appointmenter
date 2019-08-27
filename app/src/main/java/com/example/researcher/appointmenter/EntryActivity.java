@@ -4,6 +4,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.TextInputEditText;
@@ -71,7 +72,7 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
 
 
     final FirebaseFirestore db = FirebaseFirestore.getInstance();
-
+    private long mLastClickTime = 0;
 
     TextView isMaamIn;
     TextInputLayout userNameLayout,passwordLayout;
@@ -94,36 +95,7 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
         isMaamIn=findViewById(R.id.isMaamIn);
 
 
-        final DocumentReference docRef = db.collection("features").document("isMaamIn");
-        docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot snapshot,
-                                @Nullable FirebaseFirestoreException e) {
-                if (e != null) {
-                    Log.w(TAG, "Listen failed.", e);
-                    return;
-                }
 
-                if (consider && snapshot != null && snapshot.exists()) {
-
-                    boolean isIn=Boolean.parseBoolean(snapshot.get("isMaamIn").toString());
-
-                    if(isIn){
-                        isMaamIn.setTextColor(Color.GREEN);
-                        isMaamIn.setText("Status:\nMa'am is in her cabin!");
-
-
-                    }
-                    else{
-                        isMaamIn.setTextColor(Color.RED);
-                        isMaamIn.setText("Status:\nMa'am is not in her cabin\n(Her car's presence can give a clue!)");
-                    }
-
-                } else {
-                    Log.d(TAG, "Current data: null");
-                }
-            }
-        });
         final DocumentReference docRef1 = db.collection("features").document("isMaamIn");
         docRef1.addSnapshotListener(new EventListener<DocumentSnapshot>() {
             @Override
@@ -136,7 +108,7 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
 
                 if (snapshot != null && snapshot.exists()) {
                     boolean isIn=Boolean.parseBoolean(snapshot.get("isMaamIn").toString());
-                    if(!isIn){
+                    if(isIn){
                         isMaamIn.setTextColor(Color.GREEN);
                         isMaamIn.setText("Status:\nMa'am is in her cabin!");
 
@@ -171,6 +143,11 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
         registerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (SystemClock.elapsedRealtime() - mLastClickTime < 1000){
+                    return;
+                }
+                mLastClickTime = SystemClock.elapsedRealtime();
+
                 Intent toRegisterActivity = new Intent(getApplicationContext(),RegisterActivity.class);
 
                 startActivity(toRegisterActivity);
@@ -179,6 +156,10 @@ public class EntryActivity extends AppCompatActivity implements ForceUpdateCheck
         entryButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (SystemClock.elapsedRealtime() - mLastClickTime < 1000){
+                    return;
+                }
+                mLastClickTime = SystemClock.elapsedRealtime();
 
                 checkingUserName();
             }
